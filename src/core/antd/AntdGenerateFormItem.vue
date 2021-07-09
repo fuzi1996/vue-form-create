@@ -18,7 +18,7 @@
         :addonAfter="element.options.addonAfter"
         :allowClear="element.options.allowClear"
         :readonly="element.options.readonly"
-        :disabled="element.options.disabled"
+        :disabled="disabled || element.options.disabled"
       />
     </template>
 
@@ -34,7 +34,7 @@
         :addonBefore="element.options.addonBefore"
         :addonAfter="element.options.addonAfter"
         :allowClear="element.options.allowClear"
-        :disabled="element.options.disabled"
+        :disabled="disabled || element.options.disabled"
         :readonly="element.options.readonly"
         :visibilityToggle="element.options.visibilityToggle"
       />
@@ -53,7 +53,7 @@
         :autoSize="element.options.autoSize"
         :allowClear="element.options.allowClear"
         :readonly="element.options.readonly"
-        :disabled="element.options.disabled"
+        :disabled="disabled || element.options.disabled"
       />
     </template>
 
@@ -64,7 +64,7 @@
         :style="{ width: element.options.width }"
         :max="element.options.max"
         :min="element.options.min"
-        :disabled="element.options.disabled"
+        :disabled="disabled || element.options.disabled"
       />
     </template>
 
@@ -73,7 +73,7 @@
         v-model:value="data"
         :size="config.size"
         :style="{ width: element.options.width }"
-        :disabled="element.options.disabled"
+        :disabled="disabled || element.options.disabled"
       >
         <a-radio
           v-for="item of element.options.remote
@@ -93,7 +93,7 @@
       <a-checkbox-group
         v-model:value="data"
         :style="{ width: element.options.width }"
-        :disabled="element.options.disabled"
+        :disabled="disabled || element.options.disabled"
       >
         <a-checkbox
           v-for="item of element.options.remote
@@ -118,7 +118,7 @@
         :allowClear="element.options.allowClear"
         :format="element.options.format"
         :valueFormat="element.options.valueFormat"
-        :disabled="element.options.disabled"
+        :disabled="disabled || element.options.disabled"
         :style="{ width: element.options.width }"
       />
     </template>
@@ -131,7 +131,7 @@
         :inputReadOnly="element.options.readonly"
         :allowClear="element.options.allowClear"
         :format="element.options.format"
-        :disabled="element.options.disabled"
+        :disabled="disabled || element.options.disabled"
         :style="{ width: element.options.width }"
       />
     </template>
@@ -142,7 +142,7 @@
         :count="element.options.max"
         :allowHalf="element.options.allowHalf"
         :allowClear="element.options.allowClear"
-        :disabled="element.options.disabled"
+        :disabled="disabled || element.options.disabled"
       />
     </template>
 
@@ -155,7 +155,7 @@
         :filter-option="handleFilterOption"
         :allowClear="element.options.clearable"
         :showSearch="element.options.showSearch"
-        :disabled="element.options.disabled"
+        :disabled="disabled || element.options.disabled"
         :style="{ width: element.options.width }"
       >
         <a-select-option
@@ -177,7 +177,7 @@
         :size="config.size === 'large' ? 'default' : config.size"
         :checkedChildren="element.options.checkedChildren"
         :unCheckedChildren="element.options.unCheckedChildren"
-        :disabled="element.options.disabled"
+        :disabled="disabled || element.options.disabled"
       />
     </template>
 
@@ -189,7 +189,7 @@
         :step="element.options.step"
         :range="element.options.range"
         :reverse="element.options.reverse"
-        :disabled="element.options.disabled"
+        :disabled="disabled || element.options.disabled"
         :style="{ width: element.options.width }"
       />
     </template>
@@ -206,7 +206,7 @@
         :file-list="data"
         :listType="element.options.listType"
         :multiple="element.options.multiple"
-        :disabled="element.options.disabled"
+        :disabled="disabled || element.options.disabled"
         @change="handleUploadChange"
       >
         <SvgIcon
@@ -223,7 +223,7 @@
     <template v-if="element.type === 'richtext-editor'">
       <RichTextEditor
         v-model:value="data"
-        :disable="element.options.disabled"
+        :disable="disabled || element.options.disabled"
         :style="{ width: element.options.width }"
       />
     </template>
@@ -235,7 +235,7 @@
         :options="element.options.remoteOptions"
         :placeholder="element.options.placeholder"
         :allowClear="element.options.allowClear"
-        :disabled="element.options.disabled"
+        :disabled="disabled || element.options.disabled"
         :style="{ width: element.options.width }"
       />
     </template>
@@ -243,7 +243,7 @@
 </template>
 
 <script lang="ts">
-import { computed, defineComponent, PropType } from 'vue'
+import { computed, defineComponent, inject, PropType } from 'vue'
 import SvgIcon from '@/components/SvgIcon.vue'
 import RichTextEditor from '@/components/RichTextEditor.vue'
 import { WidgetForm } from '@/config/antd'
@@ -255,29 +255,28 @@ export default defineComponent({
     RichTextEditor
   },
   props: {
-    config: {
-      type: Object as PropType<WidgetForm['config']>,
-      required: true
-    },
     element: {
-      type: Object,
-      required: true
-    },
-    model: {
       type: Object,
       required: true
     }
   },
-  emits: ['update:model'],
-  setup(props, context) {
+  setup(props) {
+    const model = inject<any>('model')
+    const updateModel = inject<any>('updateModel')
+    const disabled = inject<any>('disabled')
+
     const data = computed({
-      get: () => props.model[props.element.model],
+      get: () => {
+        return model.value[props.element.model]
+      },
       set: val => {
-        const model = JSON.parse(JSON.stringify(props.model))
-        model[props.element.model] = val
-        context.emit('update:model', model)
+        const modelTmp = JSON.parse(JSON.stringify(model.value))
+        modelTmp[props.element.model] = val
+        updateModel(modelTmp)
       }
     })
+
+    const config = inject<PropType<WidgetForm['config']>>('config')
 
     const handleFilterOption = (input: string, option: { label: string }) =>
       option.label.toLowerCase().includes(input)
@@ -288,8 +287,10 @@ export default defineComponent({
 
     return {
       data,
+      config,
       handleFilterOption,
-      handleUploadChange
+      handleUploadChange,
+      disabled
     }
   }
 })

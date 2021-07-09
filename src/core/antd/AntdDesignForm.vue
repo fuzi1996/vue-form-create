@@ -30,7 +30,9 @@
               @generateJson="handleGenerateJson"
               @generateCode="handleGenerateCode"
               @clearable="handleClearable"
-            />
+            >
+              <slot name="header"></slot>
+            </AntdHeader>
             <a-layout-content :class="{ 'widget-empty': widgetForm.list }">
               <AntdWidgetForm
                 ref="widgetFormRef"
@@ -147,8 +149,9 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, reactive, PropType, toRefs, watchEffect } from 'vue'
+import { defineComponent, reactive, PropType, toRefs, watchEffect, provide } from 'vue'
 import { message } from 'ant-design-vue'
+import { defaultsDeep } from 'lodash'
 import CodeEditor from '@/components/CodeEditor.vue'
 import ComponentGroup from '@/components/ComponentGroup.vue'
 import AntdHeader from './AntdHeader.vue'
@@ -172,6 +175,11 @@ export default defineComponent({
     AntdGenerateForm,
     AntdWidgetConfig,
     AntdFormConfig
+  },
+  data() {
+    return {
+      disabled: false
+    }
   },
   props: {
     preview: {
@@ -226,7 +234,7 @@ export default defineComponent({
       antd,
       codeType: CodeType,
       widgetForm: JSON.parse(JSON.stringify(antd.widgetForm)),
-      widgetFormSelect: null,
+      widgetFormSelect: null as any,
       generateFormRef: null as any,
       configTab: 'widget',
       previewVisible: false,
@@ -244,7 +252,8 @@ export default defineComponent({
 
     const handleUploadJson = () => {
       try {
-        state.widgetForm = JSON.parse(state.jsonEg)
+        state.widgetForm.list = []
+        defaultsDeep(state.widgetForm, JSON.parse(state.jsonEg))
 
         if (state.widgetForm.list) {
           state.widgetFormSelect = state.widgetForm.list[0]
@@ -291,16 +300,22 @@ export default defineComponent({
       }
     })
 
-    const handleClearable = () =>
-      (state.widgetForm = JSON.parse(JSON.stringify(antd.widgetForm))) &&
-      (state.widgetFormSelect = null)
+    const handleClearable = () => {
+      state.widgetForm.list = []
+      defaultsDeep(
+        state.widgetForm,
+        JSON.parse(JSON.stringify(antd.widgetForm))
+      )
+      state.widgetFormSelect = null
+    }
 
     const handleReset = () => state.generateFormRef.reset()
 
     const getJson = () => state.widgetForm
 
     const setJson = (json: WidgetForm) => {
-      state.widgetForm = json
+      state.widgetForm.list = []
+      defaultsDeep(state.widgetForm, json)
       if (json.list.length) {
         state.widgetFormSelect = json.list[0]
       }
